@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Rebalance a mock-stock portfolio so that each ticker in the market has the same total value.
 Reads two text files:
@@ -11,9 +10,9 @@ Usage:
 Outputs a series of commands of the form:
     !buy TICKER QTY
     !sell TICKER QTY
-which will rebalance your holdings so that every ticker listed in the market file
-ends up with (as close as possible) the same total value.  Any leftover cash that
-cannot be spent on a whole share is minimized.
+
+Sell commands will be printed first (to free up cash), followed by buy commands,
+so that you have sufficient cash on hand before attempting any purchases.
 """
 
 import argparse
@@ -112,7 +111,8 @@ def rebalance(cash, stocks, prices):
 
     Calculate trades to rebalance so each ticker in the market ends up
     with (as close as possible) the same total value. Return a list
-    of strings like “!buy TICKER QTY” or “!sell TICKER QTY”.
+    of strings like “!buy TICKER QTY” or “!sell TICKER QTY”.  Sell commands
+    are returned first, ensuring any necessary liquidations happen before buys.
     """
 
     # 1) Use all tickers listed in 'prices', even those with zero current quantity
@@ -160,17 +160,19 @@ def rebalance(cash, stocks, prices):
             new_shares[t] += 1
             remaining_cash -= price_t
 
-    # 7) Build trade commands based on the difference between new_shares and old quantity
-    commands = []
+    # 7) Build trade commands, separating sells from buys
+    sells = []
+    buys = []
     for t in all_tickers:
         old_qty = stocks.get(t, 0)
         diff = new_shares[t] - old_qty
-        if diff > 0:
-            commands.append(f"!buy {t} {diff}")
-        elif diff < 0:
-            commands.append(f"!sell {t} {-diff}")
+        if diff < 0:
+            sells.append(f"!sell {t} {-diff}")
+        elif diff > 0:
+            buys.append(f"!buy {t} {diff}")
 
-    return commands
+    # Return sells first, then buys
+    return sells + buys
 
 
 def main():
